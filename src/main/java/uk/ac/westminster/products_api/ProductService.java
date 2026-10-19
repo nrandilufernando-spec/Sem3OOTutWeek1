@@ -12,8 +12,16 @@ public class ProductService {
 
     private List<Product> products= new ArrayList<>();
     private Long nextId = 1L;
+    private Product digitalProduct;
+
+    ProductService(){
+        this.digitalProduct=new DigitalProduct(1L,"windows10",2000,"https:downloadLink",10024);
+    }
 
     public List<Product> getAllProducts(){
+//        products.add(new DigitalProduct(1L,"windows10",2000,"https:downloadLink",10024));
+//        products.add(new PhysicalProduct(2L,"HandBag",10000,4,"1000x800")); // super() calls the parents full constructor and intiallizes the values to the variables id,name,price which are in the Product class
+        products.add(digitalProduct);
         return products;
     }
 
