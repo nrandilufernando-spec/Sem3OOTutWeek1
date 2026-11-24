@@ -1,64 +1,56 @@
 package uk.ac.westminster.products_api;
 
 import org.springframework.stereotype.Service;
+import uk.ac.westminster.products_api.repository.ProductRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-
 
 @Service
 public class ProductService {
 
-    private List<Product> products= new ArrayList<>();
-    private List<String> allSummaries=new ArrayList<>();
-    private Long nextId = 1L;
-    private Product digitalProduct;
-    private  Product physicalProduct;
+    // The interface, never the implementation.
+    private final ProductRepository repository;
 
-    ProductService(){
-        this.digitalProduct=new DigitalProduct(1L,"windows10",2000,"https:downloadLink",10024);
-        this.physicalProduct=new PhysicalProduct(2L,"HandBag",10000,4,"1000x800");
+    // One constructor, so Spring uses it automatically - no @Autowired needed.
+    public ProductService(ProductRepository repository) {
+        this.repository = repository;
     }
 
-    public List<Product> getAllProducts(){
-//        products.add(new DigitalProduct(1L,"windows10",2000,"https:downloadLink",10024));
-//        products.add(new PhysicalProduct(2L,"HandBag",10000,4,"1000x800")); // super() calls the parents full constructor and intiallizes the values to the variables id,name,price which are in the Product class
-        products.add(digitalProduct);
-        products.add(physicalProduct);
-        return products;
+    public List<Product> findAll() {
+        return repository.findAll();
     }
 
-    public Product addProduct(Product product){
-
-        product.setId(nextId++);
-        products.add(product);
-        return product;
+    public Product findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
-    public Optional<Product> getProductById(Long id){
-        return products.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst();
+    public Product addProduct(Product product) {
+        return repository.save(product);
     }
 
-    public void deleteProduct(Long id){
-        products.removeIf(p -> p.getId().equals(id));
+    public void deleteProduct(Long id) {
+        findById(id); // throws 404 if it is not there
+        repository.delete(id);
     }
 
-    public List<Product> findByName(String name){
-        return products.stream()
-                .filter(p -> p.getName().contains(name))
+    // Business rule (search) stays in the service; only storage moved out.
+    public List<Product> findByName(String name) {
+        return repository.findAll().stream()
+                .filter(p -> p.getName() != null && p.getName().contains(name))
                 .toList();
     }
-// applyDiscount method is not defined inside Product classes as the products list refers to Products reference
-    public List<String> getAllSummaries(){
-        for(Product obj:products){
-            if (obj instanceof Discountable d) {
+
+    // Business rule (10% discount on Discountable products) stays in the service.
+    public List<String> getAllSummaries() {
+        List<String> summaries = new ArrayList<>();
+        for (Product product : repository.findAll()) {
+            if (product instanceof Discountable d) {
                 d.applyDiscount(0.10);
             }
-            allSummaries.add(obj.getSummary());
+            summaries.add(product.getSummary());
         }
-        return allSummaries;
+        return summaries;
     }
 }
